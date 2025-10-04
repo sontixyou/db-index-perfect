@@ -9,7 +9,8 @@
       "Bash(mise current:*)",
       "Bash(rails generate migration:*)",
       "Bash(bundle exec rails generate migration:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(bundle exec rails generate model:*)"
     ],
     "deny": [],
     "ask": []
