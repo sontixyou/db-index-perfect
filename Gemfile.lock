@@ -99,6 +99,8 @@ GEM
     erubi (1.13.1)
     et-orbi (1.4.0)
       tzinfo
+    faker (3.5.2)
+      i18n (>= 1.8.11, < 2)
     fugit (1.11.2)
       et-orbi (~> 1, >= 1.2.11)
       raabro (~> 1.4)
@@ -303,6 +305,7 @@ DEPENDENCIES
   brakeman
   debug
   dotenv-rails
+  faker
   kamal
   mysql2 (~> 0.5)
   puma (>= 5.0)
