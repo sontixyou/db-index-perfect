@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(bundle install:*)",
+      "Bash(ruby:*)",
+      "Bash(rbenv versions:*)",
+      "Bash(brew install:*)",
+      "Bash(mise current:*)"
     ],
     "deny": [],
     "ask": []
