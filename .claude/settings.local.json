@@ -6,7 +6,10 @@
       "Bash(ruby:*)",
       "Bash(rbenv versions:*)",
       "Bash(brew install:*)",
-      "Bash(mise current:*)"
+      "Bash(mise current:*)",
+      "Bash(rails generate migration:*)",
+      "Bash(bundle exec rails generate migration:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
