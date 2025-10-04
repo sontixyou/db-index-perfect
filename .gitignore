@@ -37,3 +37,4 @@
 
 # Ignore Docker volumes
 mysql_data/
+/vendor
