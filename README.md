@@ -4,7 +4,7 @@ Rails REST API backend connected to MySQL 8.0 running in Docker container.
 
 ## Requirements
 
-- Ruby 3.2.3
+- Ruby 3.4.6
 - Rails 8.0.3
 - Docker and Docker Compose
 - MySQL 8.0 (via Docker)
