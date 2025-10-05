@@ -4,6 +4,7 @@ class Api::V1::HealthCheckController < ApplicationController
       status: 'OK',
       message: 'API is running',
       database: database_status,
+      elasticsearch: elasticsearch_status,
       timestamp: Time.current.iso8601
     }
   end
@@ -15,5 +16,12 @@ class Api::V1::HealthCheckController < ApplicationController
     'Connected'
   rescue StandardError
     'Disconnected'
+  end
+
+  def elasticsearch_status
+    Searchkick.client.cluster.health
+    'Connected'
+  rescue StandardError => e
+    "Disconnected: #{e.message}"
   end
 end

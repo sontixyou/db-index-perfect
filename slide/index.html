@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySQL Index Performance Comparison</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .slide {
+            display: none;
+            min-height: 100vh;
+            padding: 40px;
+            animation: fadeIn 0.5s;
+        }
+
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .content {
+            background: white;
+            border-radius: 20px;
+            padding: 60px;
+            max-width: 1200px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 3em;
+            color: #667eea;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 2.5em;
+            color: #764ba2;
+            margin-bottom: 40px;
+            text-align: center;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+        }
+
+        h3 {
+            font-size: 1.8em;
+            color: #667eea;
+            margin: 30px 0 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 1em;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .fast {
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .slow {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        .medium {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge-yes {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-no {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .key-points {
+            background: #f0f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 8px;
+        }
+
+        .key-points ul {
+            margin-left: 20px;
+        }
+
+        .key-points li {
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 15px;
+        }
+
+        button {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 12px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        button:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .slide-counter {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            color: #667eea;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #764ba2;
+        }
+
+        .highlight {
+            background: #fef3c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Slide 1: Title -->
+    <div class="slide active">
+        <div class="content">
+            <h1>📊 MySQL Index Performance</h1>
+            <h1 style="font-size: 2em; color: #764ba2;">実験結果まとめ</h1>
+            <div style="text-align: center; margin-top: 60px; font-size: 1.3em; color: #666;">
+                <p>B-tree vs FULLTEXT インデックスの性能比較</p>
+                <p style="margin-top: 20px; font-size: 0.9em;">Rails 8.0.3 + MySQL 8.0</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 2: users.first_name with B-tree -->
+    <div class="slide">
+        <div class="content">
+            <h2>users.first_name (B-tree Index)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Query Type</th>
+                        <th>Column</th>
+                        <th>Condition</th>
+                        <th>Time</th>
+                        <th>Index Used</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Exact match</td>
+                        <td><code>first_name</code></td>
+                        <td><code>= 'cho'</code></td>
+                        <td><span class="slow">2309.9ms</span> → <span class="fast">24.7ms</span> (cached)</td>
+                        <td><span class="badge badge-yes">✓ Yes</span></td>
+                    </tr>
+                    <tr>
+                        <td>Prefix search</td>
+                        <td><code>first_name</code></td>
+                        <td><code>LIKE 'cho%'</code></td>
+                        <td><span class="fast">1.9ms</span></td>
+                        <td><span class="badge badge-yes">✓ Yes</span></td>
+                    </tr>
+                    <tr>
+                        <td>Contains search</td>
+                        <td><code>first_name</code></td>
+                        <td><code>LIKE '%cho%'</code></td>
+                        <td><span class="fast">4.9ms</span></td>
+                        <td><span class="badge badge-no">✗ No</span> (Index scan)</td>
+                    </tr>
+                    <tr>
+                        <td>Suffix search</td>
+                        <td><code>first_name</code></td>
+                        <td><code>LIKE '%cho'</code></td>
+                        <td><span class="medium">49.7ms</span></td>
+                        <td><span class="badge badge-no">✗ No</span> (Index scan)</td>
+                    </tr>
+                    <tr>
+                        <td>Composite condition</td>
+                        <td><code>first_name + last_name</code></td>
+                        <td><code>= 'cho' AND = 'aho'</code></td>
+                        <td><span class="fast">5.9ms</span></td>
+                        <td><span class="badge badge-yes">✓ Yes</span></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="key-points">
+                <h3>🎯 Key Points</h3>
+                <ul>
+                    <li><span class="highlight">前方一致検索</span>が最速 (1.9ms)</li>
+                    <li>完全一致はキャッシュ後に高速化</li>
+                    <li>後方一致・部分一致はインデックスを効率的に使えない</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: users.first_name with FULLTEXT -->
+    <div class="slide">
+        <div class="content">
+            <h2>users.first_name (FULLTEXT Index)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Query Type</th>
+                        <th>Column</th>
+                        <th>Condition</th>
+                        <th>Time</th>
+                        <th>Index Used</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Prefix with LIKE</td>
+                        <td><code>first_name</code></td>
+                        <td><code>LIKE 'cho%'</code></td>
+                        <td><span class="slow">2347.6ms</span></td>
+                        <td><span class="badge badge-no">✗ No</span></td>
+                    </tr>
+                    <tr>
+                        <td>Regular WHERE</td>
+                        <td><code>first_name</code></td>
+                        <td><code>LIKE 'cho%'</code></td>
+                        <td><span class="medium">18.8ms</span></td>
+                        <td><span class="badge badge-no">✗ No</span></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="key-points">
+                <h3>⚠️ 重要な発見</h3>
+                <ul>
+                    <li><span class="highlight">FULLTEXTインデックスはLIKE検索では使われない</span></li>
+                    <li>B-tree (1.9ms) と比較して <span class="slow">約10倍遅い</span> (18.8ms)</li>
+                    <li>通常のWHERE句では期待した性能が出ない</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: user_profiles.career (TEXT column) -->
+    <div class="slide">
+        <div class="content">
+            <h2>user_profiles.career (TEXT Column)</h2>
+
+            <h3>B-tree Prefix Index (length: 255)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Query Type</th>
+                        <th>Column</th>
+                        <th>Condition</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Exact match</td>
+                        <td><code>career</code></td>
+                        <td><code>= 'aho%'</code></td>
+                        <td><span class="slow">11948.1ms (約12秒)</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 40px;">FULLTEXT Index</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Query Type</th>
+                        <th>Column</th>
+                        <th>Condition</th>
+                        <th>Time</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Regular WHERE</td>
+                        <td><code>career</code></td>
+                        <td><code>= 'aho%'</code></td>
+                        <td><span class="slow">13016.5ms (約13秒)</span></td>
+                        <td>FULLTEXT not used</td>
+                    </tr>
+                    <tr>
+                        <td>Boolean search</td>
+                        <td><code>career</code></td>
+                        <td><code>MATCH() AGAINST('Ruby*')</code></td>
+                        <td><span class="medium">38.9ms</span></td>
+                        <td><span class="badge badge-yes">✓ Requires FULLTEXT syntax</span></td>
+                    </tr>
+                    <tr>
+                        <td>Migration</td>
+                        <td>N/A</td>
+                        <td>Adding FULLTEXT index</td>
+                        <td><span class="slow">800.8s (約13分)</span></td>
+                        <td>Very slow on large table</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Slide 5: Elasticsearch vs RDS -->
+    <div class="slide">
+        <div class="content">
+            <h2>🔍 Elasticsearch vs RDS (MySQL)</h2>
+            <h3 style="text-align: center; color: #764ba2; margin-bottom: 40px;">user_profiles.career 検索性能比較</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Search Engine</th>
+                        <th>Column</th>
+                        <th>Response Time</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: #d1fae5;">
+                        <td><strong>Elasticsearch</strong></td>
+                        <td><code>career</code></td>
+                        <td><span class="fast">48ms - 89ms</span></td>
+                        <td><span class="badge badge-yes">✓ 高速</span></td>
+                    </tr>
+                    <tr style="background: #fee2e2;">
+                        <td><strong>RDS (MySQL)</strong></td>
+                        <td><code>career</code></td>
+                        <td><span class="slow">170ms - 240ms</span></td>
+                        <td><span class="badge badge-no">⚠ 遅い</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="key-points">
+                <h3>📊 性能比較</h3>
+                <ul>
+                    <li>Elasticsearch は RDS の <span class="highlight">約 2.5 - 3.5倍 高速</span></li>
+                    <li>最速: Elasticsearch 48ms vs RDS 170ms = <strong>3.5倍</strong></li>
+                    <li>最遅: Elasticsearch 89ms vs RDS 240ms = <strong>2.7倍</strong></li>
+                </ul>
+            </div>
+
+            <div class="key-points" style="background: #fef3c7; border-left-color: #f59e0b;">
+                <h3>💡 なぜElasticsearchが速いのか？</h3>
+                <ul>
+                    <li><strong>転置インデックス:</strong> 全文検索に特化したデータ構造</li>
+                    <li><strong>分散検索:</strong> 水平スケーリングに対応</li>
+                    <li><strong>キャッシング:</strong> クエリ結果やフィルタ結果の積極的なキャッシュ</li>
+                    <li><strong>TEXT型最適化:</strong> 大きなテキストデータの検索に最適化</li>
+                </ul>
+            </div>
+
+            <div class="key-points" style="background: #f0f9ff; border-left-color: #667eea;">
+                <h3>🎯 使い分けの指針</h3>
+                <ul>
+                    <li><strong>RDS:</strong> トランザクション整合性が必要、完全一致・前方一致検索</li>
+                    <li><strong>Elasticsearch:</strong> 全文検索、部分一致、あいまい検索、大量テキスト検索</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 6: Key Findings -->
+    <div class="slide">
+        <div class="content">
+            <h2>📌 まとめ: Key Findings</h2>
+
+            <div class="key-points">
+                <h3>1. B-tree Index</h3>
+                <ul>
+                    <li>✅ <span class="highlight">前方一致検索 (<code>LIKE 'value%'</code>)</span> に最適</li>
+                    <li>✅ 完全一致検索にも効果的</li>
+                    <li>❌ 後方一致・部分一致では効率が落ちる</li>
+                </ul>
+            </div>
+
+            <div class="key-points">
+                <h3>2. FULLTEXT Index</h3>
+                <ul>
+                    <li>❌ 通常の<code>WHERE</code>句や<code>LIKE</code>では<span class="highlight">使用されない</span></li>
+                    <li>✅ <code>MATCH() AGAINST()</code>構文が必須</li>
+                    <li>⚠️ マイグレーション時間が非常に長い (大規模テーブル)</li>
+                    <li>✅ 全文検索が必要な場合のみ有効</li>
+                </ul>
+            </div>
+
+            <div class="key-points">
+                <h3>3. Elasticsearch vs RDS</h3>
+                <ul>
+                    <li>全文検索では <span class="highlight">Elasticsearch が 2.5-3.5倍 高速</span></li>
+                    <li>TEXT型の部分一致検索に最適</li>
+                    <li>RDSはトランザクション整合性が必要な場合に使用</li>
+                </ul>
+            </div>
+
+            <div class="key-points">
+                <h3>4. Index-Only Scan</h3>
+                <ul>
+                    <li>MySQLオプティマイザが自動判断</li>
+                    <li>SELECTカラムがインデックスに含まれる場合に発生</li>
+                    <li>テーブルアクセス不要 → <span class="highlight">高速化</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 7: Recommendations -->
+    <div class="slide">
+        <div class="content">
+            <h2>💡 推奨事項</h2>
+
+            <div class="key-points">
+                <h3>Use Case別の推奨インデックス</h3>
+                <ul>
+                    <li><strong>前方一致検索が主な用途:</strong> <span class="highlight">B-tree Index</span> を使用</li>
+                    <li><strong>完全一致検索:</strong> <span class="highlight">B-tree Index</span> を使用</li>
+                    <li><strong>複合条件検索:</strong> <span class="highlight">Composite B-tree Index</span> を検討</li>
+                    <li><strong>全文検索が必要:</strong> <span class="highlight">Elasticsearch</span> を強く推奨 (RDS比で2.5-3.5倍高速)</li>
+                    <li><strong>TEXT型の部分一致:</strong> <span class="highlight">Elasticsearch</span> 一択</li>
+                </ul>
+            </div>
+
+            <div class="key-points" style="background: #fef3c7; border-left-color: #f59e0b;">
+                <h3>⚠️ 注意点</h3>
+                <ul>
+                    <li>FULLTEXTは通常のLIKE検索では性能向上しない</li>
+                    <li>大規模テーブルへのFULLTEXT追加は時間がかかる (800秒+)</li>
+                    <li><code>SELECT *</code>より必要なカラムのみ指定でIndex-Only Scan可能性UP</li>
+                    <li>Elasticsearchは別インフラ管理が必要（運用コスト考慮）</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="slide-counter">
+        <span id="current-slide">1</span> / <span id="total-slides">7</span>
+    </div>
+
+    <div class="navigation">
+        <button id="prev-btn" onclick="prevSlide()">← Previous</button>
+        <button id="next-btn" onclick="nextSlide()">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('total-slides').textContent = totalSlides;
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+
+            // Update button states
+            document.getElementById('prev-btn').disabled = currentSlide === 0;
+            document.getElementById('next-btn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                showSlide(currentSlide + 1);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                showSlide(currentSlide - 1);
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        // Initialize
+        showSlide(0);
+    </script>
+</body>
+</html>

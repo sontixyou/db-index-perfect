@@ -9,7 +9,14 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       get 'health_check', to: 'health_check#index'
-      
+
+      # Search endpoints
+      get 'search/users', to: 'search#users'
+      get 'search/user_profiles', to: 'search#user_profiles'
+      get 'search/user_profiles_mysql', to: 'search#user_profiles_mysql'
+      get 'search/user_profiles_like', to: 'search#user_profiles_like'
+      get 'search/benchmark', to: 'search#benchmark'
+
       # REST API endpoints
       resources :users
     end

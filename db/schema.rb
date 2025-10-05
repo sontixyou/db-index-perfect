@@ -10,12 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_04_073100) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_04_083432) do
   create_table "user_profiles", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.text "career", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["career"], name: "index_user_profiles_on_career", type: :fulltext
     t.index ["user_id"], name: "index_user_profiles_on_user_id"
   end
 
