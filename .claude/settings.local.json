@@ -10,7 +10,16 @@
       "Bash(rails generate migration:*)",
       "Bash(bundle exec rails generate migration:*)",
       "Bash(cat:*)",
-      "Bash(bundle exec rails generate model:*)"
+      "Bash(bundle exec rails generate model:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker compose:*)",
+      "Bash(curl:*)",
+      "Bash(bundle exec rails:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(bundle exec rake:*)",
+      "Bash(docker exec:*)"
     ],
     "deny": [],
     "ask": []
